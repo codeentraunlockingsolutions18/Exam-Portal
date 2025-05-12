@@ -1,25 +1,47 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuiz } from "@/contexts/QuizContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { Quiz } from "@/types";
 
 const Dashboard = () => {
   const { quizzes, loadQuizzes } = useQuiz();
   const { authState } = useAuth();
+  const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([]);
   
   useEffect(() => {
-    loadQuizzes();
+    const fetchQuizzes = async () => {
+      await loadQuizzes();
+    };
+    
+    fetchQuizzes();
   }, [loadQuizzes]);
+  
+  useEffect(() => {
+    // Filter quizzes relevant to user's course
+    const userCourse = authState.user?.courseId;
+    if (userCourse && quizzes.length > 0) {
+      const relevantQuizzes = quizzes.filter(quiz => 
+        quiz.courseId === userCourse || quiz.courseId === 'all' || !quiz.courseId
+      );
+      setFilteredQuizzes(relevantQuizzes);
+    } else {
+      setFilteredQuizzes(quizzes);
+    }
+  }, [quizzes, authState.user?.courseId]);
   
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">Welcome, {authState.user?.name}</h1>
-          <p className="text-gray-600 mt-1">Browse available quizzes and test your knowledge</p>
+          <p className="text-gray-600 mt-1">
+            Browse available scholarship exams 
+            {authState.user?.courseName ? ` for ${authState.user.courseName}` : ''}
+          </p>
         </div>
         
         {authState.user?.role === "admin" && (
@@ -30,7 +52,7 @@ const Dashboard = () => {
       </div>
       
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {quizzes.map(quiz => (
+        {filteredQuizzes.map(quiz => (
           <Card key={quiz.id} className="quiz-card">
             <CardHeader>
               <CardTitle>{quiz.title}</CardTitle>
@@ -54,7 +76,7 @@ const Dashboard = () => {
             </CardContent>
             <CardFooter>
               <Link to={`/quiz/${quiz.id}`} className="w-full">
-                <Button className="w-full quiz-button-primary">
+                <Button className="w-full">
                   Start Quiz
                 </Button>
               </Link>
@@ -62,9 +84,9 @@ const Dashboard = () => {
           </Card>
         ))}
         
-        {quizzes.length === 0 && (
+        {filteredQuizzes.length === 0 && (
           <div className="col-span-3 text-center py-20">
-            <p className="text-gray-500">Loading quizzes...</p>
+            <p className="text-gray-500">No quizzes available for your course at this time.</p>
           </div>
         )}
       </div>

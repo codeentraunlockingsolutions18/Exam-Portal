@@ -4,6 +4,13 @@ export interface User {
   name: string;
   email: string;
   role: "user" | "admin";
+  courseId?: string;
+  courseName?: string;
+}
+
+export interface Course {
+  id: string;
+  name: string;
 }
 
 export interface Quiz {
@@ -12,6 +19,7 @@ export interface Quiz {
   description: string;
   timeLimit: number; // in minutes
   questionCount: number;
+  courseId?: string; // The course this quiz is associated with
 }
 
 export interface Question {
@@ -50,6 +58,10 @@ export interface QuizResult {
     selectedOption: Option;
     isCorrect: boolean;
   }[];
+  correctAnswers?: number;
+  incorrectAnswers?: number;
+  timeTaken?: string;
+  submittedAt?: string;
 }
 
 // Auth types
@@ -70,4 +82,5 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  courseId?: string;
 }

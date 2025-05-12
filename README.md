@@ -13,42 +13,8 @@ This portal allows students to register for scholarship exams, select their desi
 - **Course Selection**: Students select their desired course during registration
 - **Quiz Interface**: Timed multiple-choice questions with automatic submission
 - **Results Dashboard**: Students can view their scores and performance analytics
+- **Scholarship Eligibility**: Automatic determination based on score thresholds
 - **Admin Panel**: Admins can create, edit, and manage exams and questions
-
-## Tech Stack
-
-- **Frontend**: React.js with TypeScript and Tailwind CSS
-- **UI Components**: Shadcn UI library
-- **State Management**: React Context API
-- **Routing**: React Router
-- **Data Fetching**: TanStack React Query
-
-## Project Structure
-
-```
-scholarship-exam-portal/
-├── src/
-│   ├── components/         # Reusable UI components
-│   │   ├── layouts/        # Page layout components
-│   │   └── ui/             # Shadcn UI components
-│   ├── contexts/           # React context providers
-│   │   ├── AuthContext.tsx # Authentication state management
-│   │   └── QuizContext.tsx # Quiz state management
-│   ├── pages/              # Application pages
-│   │   ├── Index.tsx       # Landing page
-│   │   ├── Register.tsx    # Student registration with course selection
-│   │   ├── Login.tsx       # Login page
-│   │   ├── Dashboard.tsx   # Student dashboard
-│   │   ├── QuizDetails.tsx # Quiz information page
-│   │   ├── QuizTaking.tsx  # Quiz examination interface
-│   │   ├── QuizResult.tsx  # Results page
-│   │   ├── AdminDashboard.tsx # Admin dashboard
-│   │   └── AdminQuizEdit.tsx  # Quiz management for admins
-│   ├── types/              # TypeScript type definitions
-│   ├── hooks/              # Custom React hooks
-│   └── App.tsx             # Main application component with routing
-└── public/                 # Static assets
-```
 
 ## Getting Started
 
@@ -70,91 +36,102 @@ scholarship-exam-portal/
    npm install
    ```
 
-3. Create a `.env` file with the following variables:
-   ```
-   # Database Connection (if using a backend)
-   DATABASE_URL=postgres://username:password@localhost:5432/scholarship_db
-   
-   # JWT Secret (if using JWT authentication)
-   JWT_SECRET=your_jwt_secret_key
-   ```
-
-4. Start the development server:
+3. Start the development server:
    ```bash
    npm run dev
    ```
 
-5. Open your browser and navigate to http://localhost:5173
+4. Open your browser and navigate to http://localhost:5173
 
-## Database Setup
+## Technical Details
 
-### Option 1: Local Database
+### Database Setup
 
-1. Install PostgreSQL on your machine
-2. Create a database named `scholarship_db`
-3. Update the `DATABASE_URL` in your `.env` file
+This application currently uses mock data. For a production environment, you'll need to connect to a database:
 
-### Option 2: Using Supabase (Recommended)
+#### Option 1: Local Database
+- Install PostgreSQL locally
+- Create a database named `scholarship_db`
+- Update your environment variables with the database connection details
 
+#### Option 2: Using Supabase (Recommended)
 1. Create a Supabase project at [supabase.com](https://supabase.com/)
-2. Navigate to the SQL editor and run the schema creation script provided below
-3. Set up authentication settings in the Supabase dashboard
-4. Update the `.env` file with your Supabase credentials
+2. Use the following schema for your tables:
 
-## Database Schema
+```sql
+-- Create courses table
+CREATE TABLE courses (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL
+);
 
-The database consists of the following tables:
+-- Create users table with course reference
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'user',
+  course_id VARCHAR(255) REFERENCES courses(id)
+);
 
-- **users**: Student and admin accounts
-- **courses**: Available study programs
-- **quizzes**: Scholarship exams
-- **questions**: Quiz questions
-- **options**: Answer choices for questions
-- **submissions**: Student exam attempts
-- **answers**: Student-selected answers
+-- Create quizzes table
+CREATE TABLE quizzes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  time_limit INTEGER NOT NULL,
+  course_id VARCHAR(255) REFERENCES courses(id)
+);
 
-## Admin Guide
+-- Create questions table
+CREATE TABLE questions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  question_text TEXT NOT NULL
+);
 
-### How to Add Questions
+-- Create options table
+CREATE TABLE options (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
+  option_text TEXT NOT NULL,
+  is_correct BOOLEAN NOT NULL DEFAULT false
+);
 
-As an admin, you can manage questions through the admin panel:
+-- Create submissions table
+CREATE TABLE submissions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  quiz_id UUID REFERENCES quizzes(id),
+  score INTEGER NOT NULL,
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-1. **Login** as an administrator account
-2. Navigate to the **Admin Dashboard** by clicking on the "Admin Dashboard" button
-3. Select the **Quizzes** tab to view all available quizzes
-4. To create a new quiz:
-   - Click the "Create New Quiz" button
-   - Fill in the quiz details (title, description, time limit)
-   - Click "Create Quiz"
-5. To add questions to a quiz:
-   - Find the quiz in the list and click "Edit"
-   - On the quiz edit page, click "Add Question"
-   - Enter the question text
-   - Add multiple options (at least 2)
-   - Mark one option as correct
-   - Click "Add Question" to save
-6. You can edit existing questions by clicking on them in the questions list
+-- Create answers table
+CREATE TABLE answers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  submission_id UUID REFERENCES submissions(id) ON DELETE CASCADE,
+  question_id UUID REFERENCES questions(id),
+  selected_option_id UUID REFERENCES options(id)
+);
+```
 
-### Managing Student Results
+3. Update your environment variables with the Supabase connection details
 
-1. Access the **Admin Dashboard**
-2. Navigate to the **Analytics** tab (upcoming feature)
-3. View aggregated results by course or by individual quiz
-4. Export results to CSV format (upcoming feature)
+## User Guide
 
-## Student Guide
+### Student Registration Process
 
-### Registration Process
-
-1. Click "Register" on the homepage
+1. Navigate to the registration page
 2. Fill in your personal details
-3. Select your desired course of study from the dropdown menu
+3. **Select your desired course of study** from the dropdown menu
 4. Create a password
 5. Submit your registration
 
 ### Taking a Scholarship Exam
 
-1. **Login** to your student account
+1. Log in to your student account
 2. On your dashboard, browse available exams for your selected course
 3. Click on an exam to view details
 4. Click "Start Quiz" when ready
@@ -163,41 +140,82 @@ As an admin, you can manage questions through the admin panel:
 
 ### Viewing Results
 
-1. After completing an exam, you'll be redirected to the results page
-2. View your score, correct answers, and areas for improvement
-3. Access previous results from your dashboard under the "My Results" section (upcoming feature)
+After completing an exam, you'll see:
+1. Your overall score percentage
+2. Number of correct and incorrect answers
+3. Time taken to complete the exam
+4. **Scholarship eligibility status** - scores of 75% or higher qualify for scholarship consideration
 
-## Customizing the Homepage
+## Admin Guide
+
+### Adding Questions
+
+As an administrator, you can manage quizzes and questions through the admin panel:
+
+1. Log in with admin credentials
+2. Navigate to the Admin Dashboard
+3. To create a new quiz:
+   - Click "Create New Quiz" 
+   - Fill in the quiz details (title, description, time limit)
+   - Select the course the quiz is for (or "All Courses")
+   - Click "Create Quiz"
+   
+4. To add questions to a quiz:
+   - Find the quiz in the list and click "Edit"
+   - On the quiz edit page, click "Add Question"
+   - Enter the question text
+   - Add multiple options (at least 2)
+   - Mark one option as correct
+   - Click "Add Question" to save
+
+### Managing Quizzes
+
+1. View all quizzes on the Admin Dashboard
+2. Filter quizzes by course using the dropdown at the top
+3. Edit existing quizzes by clicking the "Edit" button
+4. Delete quizzes by clicking the "Delete" button (this will also delete all associated questions)
+
+## Customizing the Project
+
+### Modifying the Homepage
 
 To customize the homepage for your specific college:
+1. Update `src/pages/Index.tsx`:
+   - Change the hero section text and images
+   - Update color scheme to match college branding
+   - Add specific scholarship program details
 
-1. Modify `src/pages/Index.tsx`:
-   - Update the hero section text and images
-   - Change color scheme to match college branding
-   - Add scholarship program details
-   - Update "Features" section to highlight specific benefits
+### Adding or Modifying Courses
 
-2. Update branding elements in `src/components/Header.tsx` and `src/components/Footer.tsx`:
-   - Add college logo
-   - Update navigation links
-   - Add social media links
-   - Include contact information
+To change the available courses:
+1. Update the courses array in `src/pages/Register.tsx`
+2. Update the course selection dropdown in `src/pages/AdminQuizEdit.tsx`
 
-## Course Management
+## Project Structure
 
-To add or modify available courses:
-
-1. Update the courses array in the registration page
-2. Add course-specific quiz types for each program
-3. Customize difficulty levels based on program requirements
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -m 'Add new feature'`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Submit a pull request
+```
+scholarship-exam-portal/
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── layouts/        # Page layout components
+│   │   └── ui/             # Shadcn UI components
+│   ├── contexts/           # React context providers
+│   │   ├── AuthContext.tsx # Authentication state management
+│   │   └── QuizContext.tsx # Quiz state management
+│   ├── pages/              # Application pages
+│   │   ├── Index.tsx       # Landing page
+│   │   ├── Register.tsx    # Student registration with course selection
+│   │   ├── Login.tsx       # Login page
+│   │   ├── Dashboard.tsx   # Student dashboard with course-specific quizzes
+│   │   ├── QuizDetails.tsx # Quiz information page
+│   │   ├── QuizTaking.tsx  # Quiz examination interface
+│   │   ├── QuizResult.tsx  # Results page with scholarship eligibility
+│   │   ├── AdminDashboard.tsx # Admin dashboard
+│   │   └── AdminQuizEdit.tsx  # Quiz management for admins
+│   ├── types/              # TypeScript type definitions
+│   └── App.tsx             # Main application component with routing
+└── public/                 # Static assets
+```
 
 ## License
 

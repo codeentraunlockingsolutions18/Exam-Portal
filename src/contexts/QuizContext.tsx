@@ -5,24 +5,35 @@ import { Quiz, Question, Option, Answer, QuizResult } from "@/types";
 const mockQuizzes: Quiz[] = [
   {
     id: "1",
-    title: "Web Development Fundamentals",
-    description: "Test your knowledge of HTML, CSS, and JavaScript basics",
+    title: "Computer Science Fundamentals",
+    description: "Test your knowledge of basic computer science concepts",
     timeLimit: 15, // minutes
-    questionCount: 10
+    questionCount: 10,
+    courseId: "cs"
   },
   {
     id: "2",
-    title: "React.js Concepts",
-    description: "Challenge yourself with key React concepts and patterns",
+    title: "Engineering Principles",
+    description: "Challenge yourself with key engineering concepts",
     timeLimit: 20,
-    questionCount: 15
+    questionCount: 15,
+    courseId: "eng"
   },
   {
     id: "3",
-    title: "Database Design",
-    description: "Test your understanding of database design principles",
+    title: "Business Administration Basics",
+    description: "Test your understanding of business principles",
     timeLimit: 25,
-    questionCount: 12
+    questionCount: 12,
+    courseId: "bus"
+  },
+  {
+    id: "4",
+    title: "General Knowledge",
+    description: "Test your general knowledge across multiple subjects",
+    timeLimit: 15,
+    questionCount: 20,
+    courseId: "all"
   },
 ];
 
@@ -94,7 +105,7 @@ interface QuizContextType {
   currentQuestions: Question[];
   userAnswers: Answer[];
   quizResult: QuizResult | null;
-  loadQuizzes: () => Promise<void>;
+  loadQuizzes: () => Promise<Quiz[]>;
   getQuiz: (id: string) => Promise<Quiz | null>;
   getQuizQuestions: (quizId: string) => Promise<Question[]>;
   startQuiz: (quizId: string) => Promise<void>;
@@ -112,10 +123,11 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const [userAnswers, setUserAnswers] = useState<Answer[]>([]);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
 
-  const loadQuizzes = async () => {
+  const loadQuizzes = async (): Promise<Quiz[]> => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     setQuizzes(mockQuizzes);
+    return mockQuizzes;
   };
 
   const getQuiz = async (id: string): Promise<Quiz | null> => {
@@ -165,6 +177,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
     // Calculate score
     let correctAnswers = 0;
+    let incorrectAnswers = 0;
     
     const detailedAnswers = currentQuestions.map(question => {
       const userAnswer = userAnswers.find(a => a.questionId === question.id);
@@ -172,6 +185,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       const isCorrect = selectedOption?.isCorrect || false;
       
       if (isCorrect) correctAnswers++;
+      else incorrectAnswers++;
       
       return {
         question,
@@ -182,11 +196,18 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
 
     const score = Math.round((correctAnswers / currentQuestions.length) * 100);
     
+    // Calculate time taken (in a real app, we'd track start time)
+    const timeTaken = "10:45"; // Mock time taken
+    
     const result: QuizResult = {
       quiz: currentQuiz,
       score,
       totalQuestions: currentQuestions.length,
       answers: detailedAnswers,
+      correctAnswers,
+      incorrectAnswers,
+      timeTaken,
+      submittedAt: new Date().toISOString(),
     };
     
     setQuizResult(result);

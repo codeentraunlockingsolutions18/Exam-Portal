@@ -4,13 +4,23 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Register = () => {
+  const courses = [
+    { id: "cs", name: "Computer Science" },
+    { id: "eng", name: "Engineering" },
+    { id: "bus", name: "Business Administration" },
+    { id: "arts", name: "Liberal Arts" },
+    { id: "med", name: "Medical Sciences" }
+  ];
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [passwordError, setPasswordError] = useState("");
   
   const { register, authState } = useAuth();
@@ -25,16 +35,21 @@ const Register = () => {
       return;
     }
     
-    await register({ name, email, password });
+    if (!selectedCourse) {
+      setPasswordError("Please select a course");
+      return;
+    }
+    
+    await register({ name, email, password, courseId: selectedCourse });
   };
   
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-center text-2xl font-bold text-quiz-blue">Register</CardTitle>
+        <CardTitle className="text-center text-2xl font-bold">Register for Scholarship Exam</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4">
             <div className="grid gap-2">
               <label htmlFor="name" className="text-sm font-medium">
@@ -64,6 +79,27 @@ const Register = () => {
                 required
                 disabled={isLoading}
               />
+            </div>
+            
+            <div className="grid gap-2">
+              <label htmlFor="course" className="text-sm font-medium">
+                Course of Interest
+              </label>
+              <Select 
+                value={selectedCourse}
+                onValueChange={(value) => setSelectedCourse(value)}
+              >
+                <SelectTrigger id="course">
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="grid gap-2">
@@ -110,7 +146,7 @@ const Register = () => {
       <CardFooter className="flex justify-center">
         <div className="text-sm text-gray-500">
           Already have an account?{" "}
-          <Link to="/login" className="text-quiz-blue hover:underline">
+          <Link to="/login" className="text-blue-500 hover:underline">
             Login
           </Link>
         </div>
