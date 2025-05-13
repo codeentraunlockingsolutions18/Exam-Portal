@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/components/ui/use-toast";
@@ -18,6 +18,11 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
   const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
   const { sendOTP, verifyOTP } = useAuth();
+
+  // Send OTP on component mount
+  useEffect(() => {
+    handleResendOTP();
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +56,13 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
   
   const handleResendOTP = async () => {
     setResendDisabled(true);
-    setCountdown(30);
+    setCountdown(60); // Increase timeout for email delivery
     
     try {
       await sendOTP(email);
       
       toast({
-        title: "OTP resent",
+        title: "Verification code sent",
         description: `A new verification code has been sent to ${email}`,
       });
       
@@ -73,7 +78,7 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
       }, 1000);
     } catch (error) {
       toast({
-        title: "Failed to resend OTP",
+        title: "Failed to send verification code",
         description: "Please try again",
         variant: "destructive",
       });
@@ -115,6 +120,9 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
       </form>
       
       <div className="text-center">
+        <p className="text-sm text-gray-500 mb-2">
+          Check your spam/junk folder if you don't see the email
+        </p>
         <Button 
           variant="link" 
           onClick={handleResendOTP} 

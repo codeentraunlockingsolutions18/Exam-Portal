@@ -16,32 +16,30 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [formError, setFormError] = useState("");
   const [showOtpVerification, setShowOtpVerification] = useState(false);
   
-  const { register, sendOTP, authState } = useAuth();
+  const { register, authState } = useAuth();
   const { isLoading, error } = authState;
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError("");
+    setFormError("");
     
     if (password !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+      setFormError("Passwords do not match");
       return;
     }
     
     if (!selectedCourse) {
-      setPasswordError("Please select a course");
+      setFormError("Please select a course");
       return;
     }
     
     try {
-      // Send OTP for verification
-      await sendOTP(email);
       setShowOtpVerification(true);
     } catch (error) {
-      setPasswordError("Failed to send verification code. Please try again.");
+      setFormError("Something went wrong. Please try again.");
     }
   };
   
@@ -134,8 +132,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             required
             disabled={isLoading}
           />
-          {passwordError && (
-            <p className="text-red-500 text-sm">{passwordError}</p>
+          {formError && (
+            <p className="text-red-500 text-sm">{formError}</p>
           )}
         </div>
         
@@ -144,7 +142,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         )}
         
         <Button type="submit" disabled={isLoading} className="w-full mt-2">
-          {isLoading ? "Creating Account..." : "Continue"}
+          {isLoading ? "Processing..." : "Continue"}
         </Button>
       </div>
     </form>

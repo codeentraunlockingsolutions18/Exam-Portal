@@ -3,7 +3,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useToast } from "@/components/ui/use-toast";
 import { AuthState, LoginCredentials, RegisterData, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
   authState: AuthState;
@@ -138,17 +137,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             courseId: data.courseId,
             role: "user",
           },
+          emailRedirectTo: `${window.location.origin}/login`,
         }
       });
       
       if (error) throw error;
       
-      // The session will be handled by the onAuthStateChange listener
-      
       toast({
         title: "Registration successful",
-        description: `Welcome, ${data.name}!`,
+        description: `Welcome, ${data.name}! Please verify your email to continue.`,
       });
+
+      setAuthState(prev => ({ ...prev, isLoading: false }));
     } catch (error: any) {
       setAuthState(prev => ({
         ...prev,
@@ -164,21 +164,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Send OTP for email verification
   const sendOTP = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/register',
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/register`,
+        }
       });
       
       if (error) throw error;
       
       toast({
-        title: "OTP sent",
+        title: "Verification code sent",
         description: `A verification code has been sent to ${email}`,
       });
     } catch (error: any) {
       toast({
-        title: "Failed to send OTP",
+        title: "Failed to send verification code",
         description: error?.message || "Please try again",
         variant: "destructive",
       });
