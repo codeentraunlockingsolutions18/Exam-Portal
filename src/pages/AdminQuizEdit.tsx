@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { useQuiz } from "@/contexts/QuizContext";
 import { Question, Option } from "@/types";
+import QuestionForm from "@/components/forms/QuestionForm";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminQuizEdit = () => {
   const { quizId } = useParams<{ quizId: string }>();
@@ -23,15 +24,6 @@ const AdminQuizEdit = () => {
   const [loading, setLoading] = useState(true);
   
   const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false);
-  const [newQuestion, setNewQuestion] = useState({
-    text: "",
-    options: [
-      { text: "", isCorrect: true },
-      { text: "", isCorrect: false },
-      { text: "", isCorrect: false },
-      { text: "", isCorrect: false },
-    ]
-  });
   
   // Load quiz and questions data
   useEffect(() => {
@@ -70,64 +62,74 @@ const AdminQuizEdit = () => {
     });
   };
   
-  const handleAddQuestion = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddQuestion = async (questionData: any) => {
+    if (!quizId) return;
     
-    // Validate question
-    if (!newQuestion.text.trim()) {
+    try {
+      let questionId;
+      let imageUrl = null;
+      
+      // If it's an image question, upload the image first
+      if (questionData.type === "image" && questionData.image) {
+        const file = questionData.image;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `questions/${fileName}`;
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('questions')
+          .upload(filePath, file);
+          
+        if (uploadError) {
+          throw uploadError;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('questions')
+          .getPublicUrl(filePath);
+          
+        imageUrl = publicUrl;
+      }
+      
+      // Create question in database
+      const questionText = questionData.type === "text" 
+        ? questionData.text 
+        : `[IMAGE]: ${imageUrl}`;
+        
+      const options = questionData.type === "text" 
+        ? questionData.options 
+        : questionData.imageOptions;
+      
+      // In a real app, this would insert into the database
+      // For now, just simulate adding to the list
+      const newQuestion: Question = {
+        id: Math.random().toString(),
+        quizId: quizId,
+        questionText: questionText,
+        options: options.map((opt: any, index: number) => ({
+          id: Math.random().toString(),
+          questionId: "",
+          text: opt.text,
+          isCorrect: opt.isCorrect
+        }))
+      };
+      
+      setQuestions(prev => [...prev, newQuestion]);
+      setIsAddQuestionDialogOpen(false);
+      
+      toast({
+        title: "Question Added",
+        description: "The question has been added successfully.",
+      });
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Question text is required",
+        description: error.message || "Failed to add question",
         variant: "destructive",
       });
-      return;
     }
-    
-    // Validate options
-    const emptyOptions = newQuestion.options.filter(o => !o.text.trim());
-    if (emptyOptions.length > 0) {
-      toast({
-        title: "Error",
-        description: "All options must have text",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // In a real app, this would be an API call
-    toast({
-      title: "Question Added",
-      description: "The question has been added successfully.",
-    });
-    
-    setIsAddQuestionDialogOpen(false);
-    setNewQuestion({
-      text: "",
-      options: [
-        { text: "", isCorrect: true },
-        { text: "", isCorrect: false },
-        { text: "", isCorrect: false },
-        { text: "", isCorrect: false },
-      ]
-    });
-  };
-  
-  const handleOptionChange = (index: number, text: string) => {
-    setNewQuestion(prev => {
-      const updatedOptions = [...prev.options];
-      updatedOptions[index] = { ...updatedOptions[index], text };
-      return { ...prev, options: updatedOptions };
-    });
-  };
-  
-  const handleCorrectOptionChange = (index: number) => {
-    setNewQuestion(prev => {
-      const updatedOptions = prev.options.map((option, i) => ({
-        ...option,
-        isCorrect: i === index
-      }));
-      return { ...prev, options: updatedOptions };
-    });
   };
   
   if (loading) {
@@ -216,14 +218,26 @@ const AdminQuizEdit = () => {
                   {questions.map((question, index) => (
                     <div key={question.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="w-full">
                           <div className="font-medium">Question {index + 1}</div>
-                          <div className="mt-1">{question.questionText}</div>
+                          
+                          {/* Display question based on type */}
+                          {question.questionText.startsWith("[IMAGE]:") ? (
+                            <div className="mt-2">
+                              <img 
+                                src={question.questionText.replace("[IMAGE]:", "").trim()} 
+                                alt="Question" 
+                                className="max-h-32 object-contain mb-2"
+                              />
+                            </div>
+                          ) : (
+                            <div className="mt-1">{question.questionText}</div>
+                          )}
                           
                           <div className="mt-4 space-y-2">
                             {question.options.map((option, optIndex) => (
                               <div key={option.id} className="flex items-center">
-                                <div className={`w-4 h-4 rounded-full mr-2 ${option.isCorrect ? 'bg-quiz-success' : 'bg-gray-200'}`}></div>
+                                <div className={`w-4 h-4 rounded-full mr-2 ${option.isCorrect ? 'bg-green-500' : 'bg-gray-200'}`}></div>
                                 <span>{option.text}</span>
                               </div>
                             ))}
@@ -255,57 +269,18 @@ const AdminQuizEdit = () => {
       
       {/* Add Question Dialog */}
       <Dialog open={isAddQuestionDialogOpen} onOpenChange={setIsAddQuestionDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Add New Question</DialogTitle>
             <DialogDescription>
-              Enter the question text and options. Mark the correct answer.
+              Create a text-based question or upload an image as a question.
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleAddQuestion} className="space-y-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="questionText">Question</Label>
-              <Textarea
-                id="questionText"
-                value={newQuestion.text}
-                onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
-                placeholder="Enter your question here"
-                required
-              />
-            </div>
-            
-            <div className="space-y-4">
-              <Label>Options</Label>
-              {newQuestion.options.map((option, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      checked={option.isCorrect} 
-                      onCheckedChange={() => handleCorrectOptionChange(index)} 
-                      id={`option-${index}`}
-                    />
-                    <label htmlFor={`option-${index}`} className="text-sm">
-                      Correct
-                    </label>
-                  </div>
-                  <Input
-                    value={option.text}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${index + 1}`}
-                    className="flex-1"
-                  />
-                </div>
-              ))}
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddQuestionDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Add Question</Button>
-            </DialogFooter>
-          </form>
+          <QuestionForm 
+            onSave={handleAddQuestion}
+            onCancel={() => setIsAddQuestionDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

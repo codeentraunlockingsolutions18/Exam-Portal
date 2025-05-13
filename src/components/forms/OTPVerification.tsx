@@ -21,6 +21,7 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
 
   // Send OTP on component mount
   useEffect(() => {
+    console.log("OTPVerification mounted, sending OTP to:", email);
     handleResendOTP();
   }, []);
 
@@ -37,6 +38,7 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
     }
     
     setIsVerifying(true);
+    console.log("Verifying OTP:", otp);
     
     try {
       const success = await verifyOTP(email, otp);
@@ -48,7 +50,19 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
         });
         
         onVerified();
+      } else {
+        toast({
+          title: "Verification failed",
+          description: "The code entered is invalid or has expired",
+          variant: "destructive",
+        });
       }
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
     } finally {
       setIsVerifying(false);
     }
@@ -56,15 +70,11 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
   
   const handleResendOTP = async () => {
     setResendDisabled(true);
-    setCountdown(60); // Increase timeout for email delivery
+    setCountdown(60); // 60 second timeout for email delivery
     
     try {
+      console.log("Sending OTP to:", email);
       await sendOTP(email);
-      
-      toast({
-        title: "Verification code sent",
-        description: `A new verification code has been sent to ${email}`,
-      });
       
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -76,12 +86,8 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
           return prev - 1;
         });
       }, 1000);
-    } catch (error) {
-      toast({
-        title: "Failed to send verification code",
-        description: "Please try again",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Failed to send OTP:", error);
       setResendDisabled(false);
     }
   };

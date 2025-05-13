@@ -26,6 +26,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     e.preventDefault();
     setFormError("");
     
+    // Form validations
     if (password !== confirmPassword) {
       setFormError("Passwords do not match");
       return;
@@ -36,15 +37,23 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       return;
     }
     
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters");
+      return;
+    }
+    
     try {
+      console.log("Starting registration process for:", email);
       setShowOtpVerification(true);
-    } catch (error) {
-      setFormError("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setFormError(error.message || "Something went wrong. Please try again.");
     }
   };
   
   const handleVerificationComplete = async () => {
     // Complete the registration process
+    console.log("OTP verified, completing registration");
     await register({ 
       name, 
       email, 
@@ -117,6 +126,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={isLoading}
+            minLength={6}
           />
         </div>
         

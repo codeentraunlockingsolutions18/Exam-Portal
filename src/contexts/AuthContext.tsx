@@ -167,20 +167,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Send OTP for email verification
   const sendOTP = async (email: string) => {
     try {
+      // Important: Use the correct method for OTP
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/register`,
+          shouldCreateUser: true, // This ensures a new user is created if they don't exist
         }
       });
       
       if (error) throw error;
+      
+      console.log("OTP sent successfully to:", email);
       
       toast({
         title: "Verification code sent",
         description: `A verification code has been sent to ${email}`,
       });
     } catch (error: any) {
+      console.error("Error sending OTP:", error);
       toast({
         title: "Failed to send verification code",
         description: error?.message || "Please try again",
@@ -192,19 +196,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const verifyOTP = async (email: string, token: string) => {
     try {
+      console.log("Verifying OTP for:", email, "with token:", token);
+      
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token,
         type: 'email',
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("OTP verification error:", error);
+        throw error;
+      }
       
+      console.log("OTP verification successful:", data);
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      console.error("OTP verification failed:", error);
       toast({
         title: "OTP verification failed",
-        description: "Invalid or expired code",
+        description: error?.message || "Invalid or expired code",
         variant: "destructive",
       });
       return false;
