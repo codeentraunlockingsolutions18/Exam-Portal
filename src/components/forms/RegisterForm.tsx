@@ -19,7 +19,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [passwordError, setPasswordError] = useState("");
   const [showOtpVerification, setShowOtpVerification] = useState(false);
   
-  const { register, authState } = useAuth();
+  const { register, sendOTP, authState } = useAuth();
   const { isLoading, error } = authState;
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,14 +36,23 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       return;
     }
     
-    // In a real app with Supabase, we would initiate the signup flow here
-    // For now, we'll just move to the OTP verification step
-    setShowOtpVerification(true);
+    try {
+      // Send OTP for verification
+      await sendOTP(email);
+      setShowOtpVerification(true);
+    } catch (error) {
+      setPasswordError("Failed to send verification code. Please try again.");
+    }
   };
   
   const handleVerificationComplete = async () => {
     // Complete the registration process
-    await register({ name, email, password, courseId: selectedCourse });
+    await register({ 
+      name, 
+      email, 
+      password, 
+      courseId: selectedCourse 
+    });
     
     if (onSuccess && !error) {
       onSuccess();

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OTPVerificationProps {
   email: string;
@@ -16,6 +17,7 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
+  const { sendOTP, verifyOTP } = useAuth();
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,24 +34,16 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
     setIsVerifying(true);
     
     try {
-      // In a real app with Supabase, you would verify the OTP here
-      // For example: await supabase.auth.verifyOTP({ email, token: otp })
+      const success = await verifyOTP(email, otp);
       
-      // For now, we'll simulate a successful verification
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Email verified",
-        description: "Your email has been successfully verified.",
-      });
-      
-      onVerified();
-    } catch (error) {
-      toast({
-        title: "Verification failed",
-        description: "Invalid OTP. Please check and try again.",
-        variant: "destructive",
-      });
+      if (success) {
+        toast({
+          title: "Email verified",
+          description: "Your email has been successfully verified.",
+        });
+        
+        onVerified();
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -59,24 +53,32 @@ const OTPVerification = ({ email, onVerified, onCancel }: OTPVerificationProps) 
     setResendDisabled(true);
     setCountdown(30);
     
-    // In a real app with Supabase, you would resend the OTP here
-    // For example: await supabase.auth.resend({ email, type: 'signup' })
-    
-    toast({
-      title: "OTP resent",
-      description: `A new verification code has been sent to ${email}`,
-    });
-    
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setResendDisabled(false);
-          return 0;
-        }
-        return prev - 1;
+    try {
+      await sendOTP(email);
+      
+      toast({
+        title: "OTP resent",
+        description: `A new verification code has been sent to ${email}`,
       });
-    }, 1000);
+      
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setResendDisabled(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      toast({
+        title: "Failed to resend OTP",
+        description: "Please try again",
+        variant: "destructive",
+      });
+      setResendDisabled(false);
+    }
   };
 
   return (
