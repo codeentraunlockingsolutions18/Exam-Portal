@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CourseSelector from "./CourseSelector";
 import { useAuth } from "@/contexts/AuthContext";
+import OTPVerification from "./OTPVerification";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -16,6 +17,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
   
   const { register, authState } = useAuth();
   const { isLoading, error } = authState;
@@ -34,12 +36,29 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       return;
     }
     
+    // In a real app with Supabase, we would initiate the signup flow here
+    // For now, we'll just move to the OTP verification step
+    setShowOtpVerification(true);
+  };
+  
+  const handleVerificationComplete = async () => {
+    // Complete the registration process
     await register({ name, email, password, courseId: selectedCourse });
     
     if (onSuccess && !error) {
       onSuccess();
     }
   };
+  
+  if (showOtpVerification) {
+    return (
+      <OTPVerification 
+        email={email}
+        onVerified={handleVerificationComplete}
+        onCancel={() => setShowOtpVerification(false)}
+      />
+    );
+  }
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,7 +135,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         )}
         
         <Button type="submit" disabled={isLoading} className="w-full mt-2">
-          {isLoading ? "Creating Account..." : "Register"}
+          {isLoading ? "Creating Account..." : "Continue"}
         </Button>
       </div>
     </form>
