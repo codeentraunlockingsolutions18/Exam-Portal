@@ -46,6 +46,8 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     
     try {
       console.log("Starting registration process for:", email);
+      console.log("Selected course:", selectedCourse);
+      
       // Send OTP for verification before completing registration
       const { data, error: signupError } = await supabase.auth.signUp({
         email,

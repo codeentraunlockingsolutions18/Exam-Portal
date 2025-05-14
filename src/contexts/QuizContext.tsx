@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from "react";
 import { Question, Quiz, Option } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,7 @@ interface QuizContextProps {
   currentQuestions: Question[];
   userAnswers: Record<string, string>;
   quizzes: Quiz[];
+  quizResult: any; // Add the quizResult property to fix errors
   loadQuizzes: (courseId?: string) => Promise<void>;
   getQuiz: (quizId: string) => Promise<Quiz | null>;
   getQuizQuestions: (quizId: string) => Promise<Question[]>;
@@ -22,6 +22,7 @@ const QuizContext = createContext<QuizContextProps>({
   currentQuestions: [],
   userAnswers: {},
   quizzes: [],
+  quizResult: null, // Initialize the quizResult property
   loadQuizzes: async () => {},
   getQuiz: async () => null,
   getQuizQuestions: async () => [],
@@ -35,6 +36,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentQuestions, setCurrentQuestions] = useState<Question[]>([]);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [quizResult, setQuizResult] = useState<any>(null); // Add quizResult state
 
   const loadQuizzes = async (courseId?: string) => {
     try {
@@ -139,6 +141,14 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         scorePercentage,
         formattedAnswers
       );
+
+      // Store the quiz result
+      setQuizResult({
+        quiz: currentQuiz,
+        score: scorePercentage,
+        totalQuestions,
+        submissionId
+      });
       
       return submissionId;
     } catch (error) {
@@ -152,6 +162,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentQuestions,
     userAnswers,
     quizzes,
+    quizResult, // Include quizResult in the context value
     loadQuizzes,
     getQuiz,
     getQuizQuestions,

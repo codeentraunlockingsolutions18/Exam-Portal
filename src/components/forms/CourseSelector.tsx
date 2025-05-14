@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Course } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface CourseSelectorProps {
   selectedCourse: string;
@@ -13,32 +14,37 @@ interface CourseSelectorProps {
 const CourseSelector = ({ selectedCourse, onSelectCourse, disabled }: CourseSelectorProps) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+        
+        console.log("Fetching courses from Supabase...");
         const { data, error } = await supabase
           .from('courses')
-          .select('*')
-          .order('name');
+          .select('id, name');
         
         if (error) {
           console.error('Error fetching courses:', error);
+          setError(`Failed to load courses: ${error.message}`);
           throw error;
         }
 
         if (data && data.length > 0) {
-          console.log('Courses fetched:', data);
+          console.log('Courses fetched successfully:', data);
           setCourses(data.map(course => ({
             id: course.id,
             name: course.name
           })));
         } else {
           console.warn('No courses found in the database');
+          setError("No courses found in the database");
         }
-      } catch (error) {
-        console.error('Failed to fetch courses:', error);
+      } catch (err) {
+        console.error('Failed to fetch courses:', err);
       } finally {
         setIsLoading(false);
       }
@@ -57,11 +63,16 @@ const CourseSelector = ({ selectedCourse, onSelectCourse, disabled }: CourseSele
         onValueChange={onSelectCourse}
         disabled={disabled || isLoading}
       >
-        <SelectTrigger id="course">
+        <SelectTrigger id="course" className="w-full">
           <SelectValue placeholder={isLoading ? "Loading courses..." : "Select a course"} />
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </SelectTrigger>
         <SelectContent>
-          {courses.length > 0 ? (
+          {isLoading ? (
+            <SelectItem value="loading" disabled>
+              Loading courses...
+            </SelectItem>
+          ) : courses.length > 0 ? (
             courses.map((course) => (
               <SelectItem key={course.id} value={course.id}>
                 {course.name}
@@ -69,11 +80,12 @@ const CourseSelector = ({ selectedCourse, onSelectCourse, disabled }: CourseSele
             ))
           ) : (
             <SelectItem value="no-courses" disabled>
-              {isLoading ? "Loading..." : "No courses available"}
+              {error || "No courses available"}
             </SelectItem>
           )}
         </SelectContent>
       </Select>
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   );
 };

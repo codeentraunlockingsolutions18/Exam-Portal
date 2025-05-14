@@ -1,44 +1,66 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuiz } from "@/contexts/QuizContext";
-import { useToast } from "@/components/ui/use-toast";
+import { Question } from "@/types";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 const QuizTaking = () => {
   const { quizId } = useParams<{ quizId: string }>();
   const navigate = useNavigate();
-  const { 
-    currentQuiz, 
-    currentQuestions, 
-    userAnswers, 
-    submitAnswer, 
-    submitQuiz 
-  } = useQuiz();
-  const { toast } = useToast();
+  const { getQuiz, getQuizQuestions, startQuiz, submitAnswer, submitQuiz, currentQuiz, currentQuestions, userAnswers } = useQuiz();
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Set up timer when quiz starts
   useEffect(() => {
-    if (!currentQuiz) {
-      navigate(`/quiz/${quizId}`);
-      return;
-    }
+    const loadQuiz = async () => {
+      if (!quizId) return;
+      
+      try {
+        setIsLoading(true);
+        const quiz = await getQuiz(quizId);
+        
+        if (!quiz) {
+          toast({
+            title: "Error",
+            description: "Quiz not found",
+            variant: "destructive",
+          });
+          navigate("/dashboard");
+          return;
+        }
+        
+        startQuiz(quiz);
+        setTimeLeft(quiz.timeLimit * 60); // Convert minutes to seconds
+      } catch (error) {
+        console.error("Error loading quiz:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load quiz",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Convert minutes to seconds
-    const totalSeconds = currentQuiz.timeLimit * 60;
-    setTimeLeft(totalSeconds);
+    loadQuiz();
+  }, [quizId, getQuiz, startQuiz, navigate]);
+  
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0 || isLoading) return;
     
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) {
+        if (prev === null || prev <= 1) {
           clearInterval(timer);
-          handleQuizSubmit();
+          handleSubmitQuiz();
           return 0;
         }
         return prev - 1;
@@ -46,154 +68,159 @@ const QuizTaking = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [currentQuiz, quizId, navigate]);
+  }, [timeLeft, isLoading]);
   
-  // Format time display
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  
-  const currentQuestion = currentQuestions[currentQuestionIndex];
-  const totalQuestions = currentQuestions.length;
-  
-  // Find current answer if it exists
-  const currentAnswer = userAnswers.find(
-    answer => currentQuestion && answer.questionId === currentQuestion.id
-  );
   
   const handleOptionSelect = (questionId: string, optionId: string) => {
     submitAnswer(questionId, optionId);
   };
   
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    if (currentQuestionIndex < currentQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
   
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
   
-  const handleQuizSubmit = async () => {
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
+  const handleSubmitQuiz = async () => {
     try {
-      const result = await submitQuiz();
-      navigate(`/quiz/${quizId}/result`);
+      setIsSubmitting(true);
+      const submissionId = await submitQuiz();
+      
+      if (submissionId) {
+        navigate(`/quiz-result/${submissionId}`);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit quiz",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error("Error submitting quiz:", error);
       toast({
         title: "Error",
         description: "Failed to submit quiz",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
   
-  // Redirect if no current quiz or questions
-  if (!currentQuiz || !currentQuestions.length) {
-    return null; // Redirect handled in useEffect
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-4 text-lg">Loading quiz...</p>
+      </div>
+    );
   }
   
+  if (!currentQuiz || currentQuestions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh]">
+        <p className="text-lg text-red-500">Quiz not found or no questions available</p>
+        <Button onClick={() => navigate("/dashboard")} className="mt-4">
+          Return to Dashboard
+        </Button>
+      </div>
+    );
+  }
+  
+  const currentQuestion: Question = currentQuestions[currentQuestionIndex];
+  
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">{currentQuiz.title}</h1>
-            <p className="text-sm text-gray-600">
-              Question {currentQuestionIndex + 1} of {totalQuestions}
-            </p>
-          </div>
-          <div className="quiz-timer">
-            <div className={`text-xl font-bold ${timeLeft < 60 ? 'text-red-500' : ''}`}>
-              {formatTime(timeLeft)}
+    <div className="container mx-auto py-8 px-4">
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{currentQuiz.title}</CardTitle>
+              <CardDescription>
+                Question {currentQuestionIndex + 1} of {currentQuestions.length}
+              </CardDescription>
             </div>
-            <div className="text-xs text-gray-500">Time Remaining</div>
+            {timeLeft !== null && (
+              <div className="text-lg font-semibold">
+                Time Left: {formatTime(timeLeft)}
+              </div>
+            )}
           </div>
-        </div>
-        
-        <Progress 
-          value={(currentQuestionIndex + 1) / totalQuestions * 100} 
-          className="mb-6"
-        />
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">
-              {currentQuestion?.questionText}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="text-lg font-medium">{currentQuestion.questionText}</div>
             <div className="space-y-3">
-              {currentQuestion?.options.map(option => (
-                <div 
-                  key={option.id} 
-                  className={`quiz-option ${currentAnswer?.selectedOptionId === option.id ? 'quiz-option-selected' : ''}`}
+              {currentQuestion.options.map((option) => (
+                <div
+                  key={option.id}
+                  className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                    userAnswers[currentQuestion.id] === option.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
                   onClick={() => handleOptionSelect(currentQuestion.id, option.id)}
                 >
-                  <div className="flex items-center">
-                    <div className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${
-                      currentAnswer?.selectedOptionId === option.id ? 'bg-quiz-blue border-quiz-blue' : 'border-gray-300'
-                    }`}>
-                      {currentAnswer?.selectedOptionId === option.id && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                    <div>{option.text}</div>
-                  </div>
+                  {option.text}
                 </div>
               ))}
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={handlePrevQuestion}
-              disabled={currentQuestionIndex === 0}
-            >
-              Previous
-            </Button>
-            
-            <div className="flex gap-2">
-              {currentQuestionIndex === totalQuestions - 1 ? (
-                <Button 
-                  onClick={handleQuizSubmit}
-                  disabled={isSubmitting}
-                  className="quiz-button-primary"
-                >
-                  {isSubmitting ? "Submitting..." : "Submit Quiz"}
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleNextQuestion} 
-                  className="quiz-button-primary"
-                >
-                  Next
-                </Button>
-              )}
-            </div>
-          </CardFooter>
-        </Card>
-        
-        <div className="mt-6 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            {userAnswers.length} of {totalQuestions} questions answered
           </div>
-          
-          <Button 
-            variant="outline" 
-            className="text-quiz-purple border-quiz-purple hover:bg-purple-50"
-            onClick={handleQuizSubmit}
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevQuestion}
+            disabled={currentQuestionIndex === 0}
           >
-            Submit Quiz Early
+            Previous
           </Button>
+          <div className="flex gap-2">
+            {currentQuestionIndex < currentQuestions.length - 1 ? (
+              <Button onClick={handleNextQuestion}>Next</Button>
+            ) : (
+              <Button 
+                onClick={handleSubmitQuiz} 
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Quiz"
+                )}
+              </Button>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+      
+      <div className="mt-8 w-full max-w-4xl mx-auto">
+        <div className="flex flex-wrap gap-2 justify-center">
+          {currentQuestions.map((q, index) => (
+            <Button
+              key={q.id}
+              variant={userAnswers[q.id] ? "default" : "outline"}
+              className={`w-10 h-10 p-0 ${currentQuestionIndex === index ? "ring-2 ring-offset-2" : ""}`}
+              onClick={() => setCurrentQuestionIndex(index)}
+            >
+              {index + 1}
+            </Button>
+          ))}
         </div>
       </div>
     </div>
