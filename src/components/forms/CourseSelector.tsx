@@ -17,21 +17,28 @@ const CourseSelector = ({ selectedCourse, onSelectCourse, disabled }: CourseSele
   useEffect(() => {
     const fetchCourses = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('courses')
           .select('*')
           .order('name');
         
         if (error) {
+          console.error('Error fetching courses:', error);
           throw error;
         }
 
-        setCourses(data.map(course => ({
-          id: course.id,
-          name: course.name
-        })));
+        if (data && data.length > 0) {
+          console.log('Courses fetched:', data);
+          setCourses(data.map(course => ({
+            id: course.id,
+            name: course.name
+          })));
+        } else {
+          console.warn('No courses found in the database');
+        }
       } catch (error) {
-        console.error('Error fetching courses:', error);
+        console.error('Failed to fetch courses:', error);
       } finally {
         setIsLoading(false);
       }
@@ -54,11 +61,17 @@ const CourseSelector = ({ selectedCourse, onSelectCourse, disabled }: CourseSele
           <SelectValue placeholder={isLoading ? "Loading courses..." : "Select a course"} />
         </SelectTrigger>
         <SelectContent>
-          {courses.map((course) => (
-            <SelectItem key={course.id} value={course.id}>
-              {course.name}
+          {courses.length > 0 ? (
+            courses.map((course) => (
+              <SelectItem key={course.id} value={course.id}>
+                {course.name}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="no-courses" disabled>
+              {isLoading ? "Loading..." : "No courses available"}
             </SelectItem>
-          ))}
+          )}
         </SelectContent>
       </Select>
     </div>
