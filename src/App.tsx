@@ -25,6 +25,7 @@ import QuizTaking from "@/pages/QuizTaking";
 import QuizResult from "@/pages/QuizResult";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminQuizEdit from "@/pages/AdminQuizEdit";
+import AdminUserManagement from "@/pages/AdminUserManagement";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
                   <Route element={<AdminLayout />}>
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/quiz/:quizId" element={<AdminQuizEdit />} />
+                    <Route path="/admin/users" element={<AdminUserManagement />} />
                   </Route>
                 </Route>
                 

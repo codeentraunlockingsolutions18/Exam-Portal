@@ -1,241 +1,204 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+
+import React, { createContext, useState, useContext } from "react";
 import { Quiz, Question, Option, Answer, QuizResult } from "@/types";
+import { useAuth } from "./AuthContext";
+import { submitQuiz } from "@/services/supabaseService";
+import { toast } from "@/components/ui/use-toast";
 
-// Mock data
-const mockQuizzes: Quiz[] = [
-  {
-    id: "1",
-    title: "Computer Science Fundamentals",
-    description: "Test your knowledge of basic computer science concepts",
-    timeLimit: 15, // minutes
-    questionCount: 10,
-    courseId: "cs"
-  },
-  {
-    id: "2",
-    title: "Engineering Principles",
-    description: "Challenge yourself with key engineering concepts",
-    timeLimit: 20,
-    questionCount: 15,
-    courseId: "eng"
-  },
-  {
-    id: "3",
-    title: "Business Administration Basics",
-    description: "Test your understanding of business principles",
-    timeLimit: 25,
-    questionCount: 12,
-    courseId: "bus"
-  },
-  {
-    id: "4",
-    title: "General Knowledge",
-    description: "Test your general knowledge across multiple subjects",
-    timeLimit: 15,
-    questionCount: 20,
-    courseId: "all"
-  },
-];
-
-const mockQuestions: Record<string, Question[]> = {
-  "1": [
-    {
-      id: "q1-1",
-      quizId: "1",
-      questionText: "What does HTML stand for?",
-      options: [
-        { id: "q1-1-a", questionId: "q1-1", text: "Hyper Text Markup Language", isCorrect: true },
-        { id: "q1-1-b", questionId: "q1-1", text: "Hyper Transfer Markup Language", isCorrect: false },
-        { id: "q1-1-c", questionId: "q1-1", text: "High Tech Modern Language", isCorrect: false },
-        { id: "q1-1-d", questionId: "q1-1", text: "Hyperlink and Text Markup Language", isCorrect: false },
-      ]
-    },
-    {
-      id: "q1-2",
-      quizId: "1",
-      questionText: "Which CSS property is used to change the text color?",
-      options: [
-        { id: "q1-2-a", questionId: "q1-2", text: "text-color", isCorrect: false },
-        { id: "q1-2-b", questionId: "q1-2", text: "font-color", isCorrect: false },
-        { id: "q1-2-c", questionId: "q1-2", text: "color", isCorrect: true },
-        { id: "q1-2-d", questionId: "q1-2", text: "text-style", isCorrect: false },
-      ]
-    },
-    {
-      id: "q1-3",
-      quizId: "1",
-      questionText: "What is the correct JavaScript syntax to change the content of the HTML element with id 'demo'?",
-      options: [
-        { id: "q1-3-a", questionId: "q1-3", text: "#demo.innerHTML = 'Hello World!';", isCorrect: false },
-        { id: "q1-3-b", questionId: "q1-3", text: "document.getElement('demo').innerHTML = 'Hello World!';", isCorrect: false },
-        { id: "q1-3-c", questionId: "q1-3", text: "document.getElementById('demo').innerHTML = 'Hello World!';", isCorrect: true },
-        { id: "q1-3-d", questionId: "q1-3", text: "document.getElementByName('demo').innerHTML = 'Hello World!';", isCorrect: false },
-      ]
-    },
-  ],
-  "2": [
-    {
-      id: "q2-1",
-      quizId: "2",
-      questionText: "What is JSX in React?",
-      options: [
-        { id: "q2-1-a", questionId: "q2-1", text: "A JavaScript library", isCorrect: false },
-        { id: "q2-1-b", questionId: "q2-1", text: "A syntax extension for JavaScript that allows writing HTML-like code in JavaScript", isCorrect: true },
-        { id: "q2-1-c", questionId: "q2-1", text: "A database query language", isCorrect: false },
-        { id: "q2-1-d", questionId: "q2-1", text: "JavaScript XML", isCorrect: false },
-      ]
-    },
-    {
-      id: "q2-2",
-      quizId: "2",
-      questionText: "What is a React Hook?",
-      options: [
-        { id: "q2-2-a", questionId: "q2-2", text: "A way to use state and other React features in functional components", isCorrect: true },
-        { id: "q2-2-b", questionId: "q2-2", text: "A method to connect React with backend APIs", isCorrect: false },
-        { id: "q2-2-c", questionId: "q2-2", text: "A tool for debugging React applications", isCorrect: false },
-        { id: "q2-2-d", questionId: "q2-2", text: "A component lifecycle method", isCorrect: false },
-      ]
-    },
-  ],
-};
-
-interface QuizContextType {
-  quizzes: Quiz[];
+interface QuizContextProps {
   currentQuiz: Quiz | null;
-  currentQuestions: Question[];
+  setCurrentQuiz: (quiz: Quiz | null) => void;
+  questions: Question[];
+  setQuestions: (questions: Question[]) => void;
   userAnswers: Answer[];
+  setUserAnswers: (answers: Answer[]) => void;
+  currentQuestionIndex: number;
+  setCurrentQuestionIndex: (index: number) => void;
+  timerMinutes: number;
+  timerSeconds: number;
+  setTimer: (minutes: number, seconds: number) => void;
+  quizStartTime: Date | null;
+  setQuizStartTime: (date: Date | null) => void;
   quizResult: QuizResult | null;
-  loadQuizzes: () => Promise<Quiz[]>;
-  getQuiz: (id: string) => Promise<Quiz | null>;
-  getQuizQuestions: (quizId: string) => Promise<Question[]>;
-  startQuiz: (quizId: string) => Promise<void>;
-  submitAnswer: (questionId: string, optionId: string) => void;
-  submitQuiz: () => Promise<QuizResult>;
-  clearQuizState: () => void;
+  setQuizResult: (result: QuizResult | null) => void;
+  submitQuizAnswers: () => Promise<void>;
+  answerQuestion: (questionId: string, optionId: string) => void;
+  calculateScore: () => { score: number; correctAnswers: number; incorrectAnswers: number };
 }
 
-const QuizContext = createContext<QuizContextType | undefined>(undefined);
+const QuizContext = createContext<QuizContextProps>({
+  currentQuiz: null,
+  setCurrentQuiz: () => {},
+  questions: [],
+  setQuestions: () => {},
+  userAnswers: [],
+  setUserAnswers: () => {},
+  currentQuestionIndex: 0,
+  setCurrentQuestionIndex: () => {},
+  timerMinutes: 0,
+  timerSeconds: 0,
+  setTimer: () => {},
+  quizStartTime: null,
+  setQuizStartTime: () => {},
+  quizResult: null,
+  setQuizResult: () => {},
+  submitQuizAnswers: async () => {},
+  answerQuestion: () => {},
+  calculateScore: () => ({ score: 0, correctAnswers: 0, incorrectAnswers: 0 }),
+});
 
-export const QuizProvider = ({ children }: { children: ReactNode }) => {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
-  const [currentQuestions, setCurrentQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [userAnswers, setUserAnswers] = useState<Answer[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timerMinutes, setTimerMinutes] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [quizStartTime, setQuizStartTime] = useState<Date | null>(null);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
-
-  const loadQuizzes = async (): Promise<Quiz[]> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setQuizzes(mockQuizzes);
-    return mockQuizzes;
+  
+  const { authState } = useAuth();
+  
+  const setTimer = (minutes: number, seconds: number) => {
+    setTimerMinutes(minutes);
+    setTimerSeconds(seconds);
   };
-
-  const getQuiz = async (id: string): Promise<Quiz | null> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockQuizzes.find(quiz => quiz.id === id) || null;
+  
+  const answerQuestion = (questionId: string, optionId: string) => {
+    const existingAnswerIndex = userAnswers.findIndex(
+      (a) => a.questionId === questionId
+    );
+  
+    if (existingAnswerIndex !== -1) {
+      const newAnswers = [...userAnswers];
+      newAnswers[existingAnswerIndex].selectedOptionId = optionId;
+      setUserAnswers(newAnswers);
+    } else {
+      setUserAnswers([...userAnswers, { questionId, selectedOptionId: optionId }]);
+    }
   };
-
-  const getQuizQuestions = async (quizId: string): Promise<Question[]> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockQuestions[quizId] || [];
-  };
-
-  const startQuiz = async (quizId: string) => {
-    const quiz = await getQuiz(quizId);
-    if (!quiz) throw new Error("Quiz not found");
+  
+  const calculateScore = () => {
+    let correctCount = 0;
     
-    const questions = await getQuizQuestions(quizId);
-    
-    setCurrentQuiz(quiz);
-    setCurrentQuestions(questions);
-    setUserAnswers([]);
-    setQuizResult(null);
-  };
-
-  const submitAnswer = (questionId: string, optionId: string) => {
-    setUserAnswers(prev => {
-      // Check if already answered, if so update
-      const existingAnswerIndex = prev.findIndex(answer => answer.questionId === questionId);
+    // Check each user answer against the correct answer
+    userAnswers.forEach((answer) => {
+      const question = questions.find((q) => q.id === answer.questionId);
+      if (!question) return;
       
-      if (existingAnswerIndex !== -1) {
-        const updatedAnswers = [...prev];
-        updatedAnswers[existingAnswerIndex] = { questionId, selectedOptionId: optionId };
-        return updatedAnswers;
+      const selectedOption = question.options.find(
+        (o) => o.id === answer.selectedOptionId
+      );
+      
+      if (selectedOption?.isCorrect) {
+        correctCount++;
+      }
+    });
+    
+    const score = Math.round((correctCount / questions.length) * 100);
+    const incorrectAnswers = questions.length - correctCount;
+    
+    return {
+      score,
+      correctAnswers: correctCount,
+      incorrectAnswers,
+    };
+  };
+  
+  const submitQuizAnswers = async () => {
+    if (!currentQuiz || !authState.user) {
+      toast({
+        title: "Error",
+        description: "Quiz or user information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const { score, correctAnswers, incorrectAnswers } = calculateScore();
+      
+      // Format answers for submission
+      const formattedAnswers = userAnswers.map(answer => ({
+        questionId: answer.questionId,
+        selectedOptionId: answer.selectedOptionId
+      }));
+      
+      // Save submission to Supabase
+      await submitQuiz(
+        currentQuiz.id,
+        authState.user.id,
+        score,
+        formattedAnswers
+      );
+      
+      // Calculate time taken
+      let timeTaken = "Not recorded";
+      if (quizStartTime) {
+        const endTime = new Date();
+        const diff = Math.abs(endTime.getTime() - quizStartTime.getTime());
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        timeTaken = `${minutes}m ${seconds}s`;
       }
       
-      // Otherwise add new answer
-      return [...prev, { questionId, selectedOptionId: optionId }];
-    });
-  };
-
-  const submitQuiz = async (): Promise<QuizResult> => {
-    if (!currentQuiz || currentQuestions.length === 0) {
-      throw new Error("No active quiz");
-    }
-
-    // Calculate score
-    let correctAnswers = 0;
-    let incorrectAnswers = 0;
-    
-    const detailedAnswers = currentQuestions.map(question => {
-      const userAnswer = userAnswers.find(a => a.questionId === question.id);
-      const selectedOption = question.options.find(o => userAnswer && o.id === userAnswer.selectedOptionId);
-      const isCorrect = selectedOption?.isCorrect || false;
-      
-      if (isCorrect) correctAnswers++;
-      else incorrectAnswers++;
-      
-      return {
-        question,
-        selectedOption: selectedOption || { id: "", questionId: question.id, text: "Not answered" },
-        isCorrect,
+      // Build result object
+      const result: QuizResult = {
+        quiz: currentQuiz,
+        score,
+        totalQuestions: questions.length,
+        correctAnswers,
+        incorrectAnswers,
+        timeTaken,
+        submittedAt: new Date().toISOString(),
+        answers: userAnswers.map((answer) => {
+          const question = questions.find((q) => q.id === answer.questionId)!;
+          const selectedOption = question.options.find(
+            (o) => o.id === answer.selectedOptionId
+          )!;
+          const isCorrect = selectedOption.isCorrect || false;
+          
+          return {
+            question,
+            selectedOption,
+            isCorrect,
+          };
+        }),
       };
-    });
-
-    const score = Math.round((correctAnswers / currentQuestions.length) * 100);
-    
-    // Calculate time taken (in a real app, we'd track start time)
-    const timeTaken = "10:45"; // Mock time taken
-    
-    const result: QuizResult = {
-      quiz: currentQuiz,
-      score,
-      totalQuestions: currentQuestions.length,
-      answers: detailedAnswers,
-      correctAnswers,
-      incorrectAnswers,
-      timeTaken,
-      submittedAt: new Date().toISOString(),
-    };
-    
-    setQuizResult(result);
-    return result;
-  };
-
-  const clearQuizState = () => {
-    setCurrentQuiz(null);
-    setCurrentQuestions([]);
-    setUserAnswers([]);
-    setQuizResult(null);
+      
+      setQuizResult(result);
+      
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+      toast({
+        title: "Submission Error",
+        description: "Failed to submit your quiz answers. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <QuizContext.Provider
       value={{
-        quizzes,
         currentQuiz,
-        currentQuestions,
+        setCurrentQuiz,
+        questions,
+        setQuestions,
         userAnswers,
+        setUserAnswers,
+        currentQuestionIndex,
+        setCurrentQuestionIndex,
+        timerMinutes,
+        timerSeconds,
+        setTimer,
+        quizStartTime,
+        setQuizStartTime,
         quizResult,
-        loadQuizzes,
-        getQuiz,
-        getQuizQuestions,
-        startQuiz,
-        submitAnswer,
-        submitQuiz,
-        clearQuizState,
+        setQuizResult,
+        submitQuizAnswers,
+        answerQuestion,
+        calculateScore,
       }}
     >
       {children}
@@ -243,12 +206,4 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useQuiz = () => {
-  const context = useContext(QuizContext);
-  
-  if (!context) {
-    throw new Error("useQuiz must be used within a QuizProvider");
-  }
-  
-  return context;
-};
+export const useQuiz = () => useContext(QuizContext);

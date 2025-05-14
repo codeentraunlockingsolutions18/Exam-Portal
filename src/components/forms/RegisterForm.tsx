@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import CourseSelector from "./CourseSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import OTPVerification from "./OTPVerification";
+import { toast } from "@/components/ui/use-toast";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -44,25 +45,35 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     
     try {
       console.log("Starting registration process for:", email);
-      setShowOtpVerification(true);
+      // Send OTP for verification before completing registration
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            courseId: selectedCourse,
+            role: 'user' // Default role for new registrations
+          }
+        }
+      });
+
+      if (signupError) {
+        throw signupError;
+      }
+
+      toast({
+        title: "Verification email sent",
+        description: "Please check your email to verify your account.",
+      });
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+      
     } catch (error: any) {
       console.error("Registration error:", error);
       setFormError(error.message || "Something went wrong. Please try again.");
-    }
-  };
-  
-  const handleVerificationComplete = async () => {
-    // Complete the registration process
-    console.log("OTP verified, completing registration");
-    await register({ 
-      name, 
-      email, 
-      password, 
-      courseId: selectedCourse 
-    });
-    
-    if (onSuccess && !error) {
-      onSuccess();
     }
   };
   
@@ -70,7 +81,11 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     return (
       <OTPVerification 
         email={email}
-        onVerified={handleVerificationComplete}
+        onVerified={() => {
+          if (onSuccess) {
+            onSuccess();
+          }
+        }}
         onCancel={() => setShowOtpVerification(false)}
       />
     );
@@ -152,7 +167,7 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
         )}
         
         <Button type="submit" disabled={isLoading} className="w-full mt-2">
-          {isLoading ? "Processing..." : "Continue"}
+          {isLoading ? "Processing..." : "Register"}
         </Button>
       </div>
     </form>

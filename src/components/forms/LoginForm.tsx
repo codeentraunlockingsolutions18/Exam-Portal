@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface LoginFormProps {
@@ -11,16 +13,39 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
-  const { login, authState } = useAuth();
-  const { isLoading, error } = authState;
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ email, password });
+    setError(null);
+    setIsLoading(true);
     
-    if (onSuccess && !error) {
-      onSuccess();
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        throw signInError;
+      }
+
+      toast({
+        title: "Logged in successfully",
+        description: "Welcome back!",
+      });
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.message || "Invalid email or password");
+    } finally {
+      setIsLoading(false);
     }
   };
   
