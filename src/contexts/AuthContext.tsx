@@ -46,9 +46,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('Auth state changed:', event);
             
             if (session) {
+              // Map Supabase User to our App User type
+              const appUser: User = {
+                id: session.user.id,
+                name: session.user.user_metadata.name || "User",
+                email: session.user.email || "",
+                role: (session.user.user_metadata.role as "user" | "admin") || "user",
+                courseId: session.user.user_metadata.courseId,
+                courseName: session.user.user_metadata.courseName,
+              };
+              
               // User is signed in
               setAuthState({
-                user: session.user,
+                user: appUser,
                 token: session.access_token,
                 isAuthenticated: true,
                 isLoading: false,
@@ -70,8 +80,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Then check current session
         const { data } = await supabase.auth.getSession();
         if (data.session) {
+          // Map Supabase User to our App User type
+          const appUser: User = {
+            id: data.session.user.id,
+            name: data.session.user.user_metadata.name || "User",
+            email: data.session.user.email || "",
+            role: (data.session.user.user_metadata.role as "user" | "admin") || "user",
+            courseId: data.session.user.user_metadata.courseId,
+            courseName: data.session.user.user_metadata.courseName,
+          };
+          
           setAuthState({
-            user: data.session.user,
+            user: appUser,
             token: data.session.access_token,
             isAuthenticated: true,
             isLoading: false,
