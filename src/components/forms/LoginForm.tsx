@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -13,25 +13,17 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { login, authState } = useAuth();
+  const { isLoading, error } = authState;
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
     
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      await login({ email, password });
       
-      if (signInError) {
-        throw signInError;
-      }
-
       toast({
         title: "Logged in successfully",
         description: "Welcome back!",
@@ -39,13 +31,13 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       
       if (onSuccess) {
         onSuccess();
+      } else {
+        navigate('/dashboard');
       }
       
-    } catch (error: any) {
-      console.error("Login error:", error);
-      setError(error.message || "Invalid email or password");
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      // Error is handled inside the login function in AuthContext
+      console.error("Login submission error:", err);
     }
   };
   

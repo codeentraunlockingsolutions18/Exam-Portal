@@ -40,25 +40,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Setup auth state listener
+        // Set up auth state listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             console.log('Auth state changed:', event);
             
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              if (session) {
-                // Fetch user profile data
-                const user = await getCurrentUser();
-                
-                setAuthState({
-                  user,
-                  token: session.access_token,
-                  isAuthenticated: true,
-                  isLoading: false,
-                  error: null,
-                });
-              }
-            } else if (event === 'SIGNED_OUT') {
+            if (session) {
+              // User is signed in
+              setAuthState({
+                user: session.user,
+                token: session.access_token,
+                isAuthenticated: true,
+                isLoading: false,
+                error: null,
+              });
+            } else {
+              // User is signed out
               setAuthState({
                 user: null,
                 token: null,
@@ -70,15 +67,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         );
 
-        // Check current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          const user = await getCurrentUser();
-          
+        // Then check current session
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
           setAuthState({
-            user,
-            token: session.access_token,
+            user: data.session.user,
+            token: data.session.access_token,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -113,8 +107,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) throw error;
-      
-      // The session update will be handled by the onAuthStateChange listener
       
       toast({
         title: "Login successful",
@@ -184,8 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      
-      // The session update will be handled by the onAuthStateChange listener
       
       toast({
         title: "Logged out",

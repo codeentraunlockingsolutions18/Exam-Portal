@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CourseSelector from "./CourseSelector";
 import { useAuth } from "@/contexts/AuthContext";
-import OTPVerification from "./OTPVerification";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -19,10 +18,10 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [formError, setFormError] = useState("");
-  const [showOtpVerification, setShowOtpVerification] = useState(false);
   
   const { register, authState } = useAuth();
   const { isLoading, error } = authState;
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,51 +47,29 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
       console.log("Starting registration process for:", email);
       console.log("Selected course:", selectedCourse);
       
-      // Send OTP for verification before completing registration
-      const { data, error: signupError } = await supabase.auth.signUp({
+      await register({
+        name,
         email,
         password,
-        options: {
-          data: {
-            name,
-            courseId: selectedCourse,
-            role: 'user' // Default role for new registrations
-          }
-        }
+        courseId: selectedCourse
       });
-
-      if (signupError) {
-        throw signupError;
-      }
-
+      
       toast({
-        title: "Verification email sent",
-        description: "Please check your email to verify your account.",
+        title: "Registration successful",
+        description: "Please check your email to verify your account",
       });
       
       if (onSuccess) {
         onSuccess();
+      } else {
+        navigate('/login');
       }
       
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      setFormError(error.message || "Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      setFormError(err.message || "Something went wrong. Please try again.");
     }
   };
-  
-  if (showOtpVerification) {
-    return (
-      <OTPVerification 
-        email={email}
-        onVerified={() => {
-          if (onSuccess) {
-            onSuccess();
-          }
-        }}
-        onCancel={() => setShowOtpVerification(false)}
-      />
-    );
-  }
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -160,10 +137,11 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
             required
             disabled={isLoading}
           />
-          {formError && (
-            <p className="text-red-500 text-sm">{formError}</p>
-          )}
         </div>
+        
+        {formError && (
+          <p className="text-red-500 text-sm">{formError}</p>
+        )}
         
         {error && (
           <div className="text-red-500 text-sm">{error}</div>
