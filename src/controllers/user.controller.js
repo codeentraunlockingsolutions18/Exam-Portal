@@ -13,11 +13,11 @@ function generateAccesKey(id, email) {
 }
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, username, email, role, course_id, password } = req.body;
+  const { name, username, email, course_id, password } = req.body;
   // console.log("email", email);
 
   if (
-    [name, email, role, course_id, password].some(
+    [name, email, course_id, password].some(
       (field) => !field || String(field).trim() === ""
     )
   ) {
@@ -56,7 +56,6 @@ const registerUser = asyncHandler(async (req, res) => {
     name,
     email,
     course_id,
-    role,
     username: (username || "").toLowerCase(),
     password_hash: hashedPassword,
   });
