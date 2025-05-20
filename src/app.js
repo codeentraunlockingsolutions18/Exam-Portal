@@ -12,18 +12,26 @@ import sequelize from "./db/index.js";
 
 // import models
 import Course from "./models/courses.model.js";
-
+import User from "./models/user.model.js";
+import Quiz from "./models/quizzes.model.js";
 //routes import
 
 import userRouter from "./routes/user.route.js";
 import allCourses from "./routes/course.route.js";
+import quizzesRoute from "./routes/quizzes.route.js";
 
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
+// database relation
+User.belongsTo(Course, { foreignKey: "course_id", onDelete: "CASCADE" });
+Course.hasMany(User, { foreignKey: "course_id" });
+Quiz.belongsTo(Course, { foreignKey: "course_id", onDelete: "CASCADE" });
+
 // routes declaration
 app.use("/api/v1", allCourses);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/user", quizzesRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello belal World!");
@@ -31,7 +39,7 @@ app.get("/", (req, res) => {
 
 sequelize
   .sync()
-  //   .sync({ force: true })
+  // .sync({ force: true })
   .then(() => {
     app.on("error", (error) => {
       console.log("Error Event For App !!", error);

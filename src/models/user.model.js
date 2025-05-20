@@ -28,11 +28,6 @@ const User = sequelize.define("User", {
     type: DataTypes.ENUM("admin", "student"),
     allowNull: false,
   },
-
-  course_id: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
 });
 
 export default User;

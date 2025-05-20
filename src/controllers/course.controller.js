@@ -6,7 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 const usersCourses = asyncHandler(async (req, res) => {
   const courses = await Course.findAll();
 
-  console.log("course>>>>>>>", courses);
+  // console.log("course>>>>>>>", courses);
   return res
     .status(200)
     .json(new ApiResponse(200, courses ?? [], "Courses fetched successfully"));
