@@ -8,8 +8,8 @@ import { Op } from "sequelize";
 
 import jwt from "jsonwebtoken";
 
-function generateAccesKey(id, email) {
-  return jwt.sign({ id, email }, process.env.TOKEN_SECRET);
+function generateAccesKey(id, username, email) {
+  return jwt.sign({ id, username, email }, process.env.TOKEN_SECRET);
 }
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -17,7 +17,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // console.log("email", email);
 
   if (
-    [name, email, course_id, password].some(
+    [name, username, email, course_id, password].some(
       (field) => !field || String(field).trim() === ""
     )
   ) {
@@ -52,12 +52,15 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10); // 10 = saltRounds
 
+  const role = username.toLowerCase().includes("admin") ? "admin" : "student";
+
   const newUser = await User.create({
     name,
     email,
     course_id,
     username: (username || "").toLowerCase(),
     password_hash: hashedPassword,
+    role,
   });
 
   return res
@@ -72,7 +75,10 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "username or email is required");
   }
 
-  const conditions = [{ email }];
+  const conditions = [];
+  if (email?.trim()) {
+    conditions.push({ email });
+  }
   if (username?.trim()) {
     conditions.push({ username });
   }
@@ -99,8 +105,12 @@ const loginUser = asyncHandler(async (req, res) => {
         new ApiResponse(
           200,
           {
-            user: existedUser.name,
-            token: generateAccesKey(existedUser.id, existedUser.email),
+            user: { name: existedUser.name, role: existedUser.role },
+            token: generateAccesKey(
+              existedUser.id,
+              existedUser.username,
+              existedUser.email
+            ),
           },
           "User logged In successfully"
         )
