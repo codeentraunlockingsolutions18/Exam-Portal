@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
-// import cors from "cors";
+import cors from "cors"; // ✅ UNCOMMENT this
+
 const app = express();
 
 dotenv.config({
@@ -13,11 +14,17 @@ import sequelize from "./db/index.js";
 // import models
 import Course from "./models/courses.model.js";
 
-//routes import
-
+// routes import
 import userRouter from "./routes/user.route.js";
 import allCourses from "./routes/course.route.js";
 
+// ✅ Add CORS middleware here
+app.use(cors({
+  origin: "http://localhost:8080",
+  credentials: true
+}));
+
+// middleware
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
@@ -31,7 +38,6 @@ app.get("/", (req, res) => {
 
 sequelize
   .sync()
-  //   .sync({ force: true })
   .then(() => {
     app.on("error", (error) => {
       console.log("Error Event For App !!", error);
