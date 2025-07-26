@@ -55,6 +55,7 @@ export const useCourses = () => {
 // ✅ Hook 2: Register user
 interface RegisterPayload {
   name: string;
+  username: string; // ✅ Now required
   email: string;
   password: string;
   course_id: string;
@@ -79,7 +80,7 @@ export const useRegisterUser = () => {
         },
         body: JSON.stringify({
           ...payload,
-          role: "admin", // Hardcoded
+          role: "admin",
         }),
       });
 
@@ -88,7 +89,6 @@ export const useRegisterUser = () => {
         throw new Error(`Registration failed: ${text}`);
       }
 
-      // Optional: validate response.json() if server returns data
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || "Something went wrong during registration.");

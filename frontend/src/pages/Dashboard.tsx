@@ -44,7 +44,7 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {authState.user?.role === "admin" && (
+        {authState.user?.role === "ADMIN" && (
           <Link to="/admin">
             <Button variant="outline">Admin Dashboard</Button>
           </Link>

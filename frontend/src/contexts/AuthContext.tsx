@@ -1,208 +1,113 @@
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import { callLoginAPI } from '@/services/authService';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { AuthState, LoginCredentials, RegisterData, User } from "@/types";
-
-// Mock API for now - would be replaced with actual API calls
-const mockLogin = async (credentials: LoginCredentials): Promise<{ user: User; token: string }> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock validation
-  if (credentials.email === "admin@example.com" && credentials.password === "password") {
-    return {
-      user: {
-        id: "1",
-        name: "Admin User",
-        email: "admin@example.com",
-        role: "admin"
-      },
-      token: "mock-jwt-token-admin"
-    };
-  }
-  
-  if (credentials.email === "user@example.com" && credentials.password === "password") {
-    return {
-      user: {
-        id: "2",
-        name: "Regular User",
-        email: "user@example.com",
-        role: "user"
-      },
-      token: "mock-jwt-token-user"
-    };
-  }
-  
-  throw new Error("Invalid credentials");
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role:'ADMIN' | 'STUDENT';
+  courseId?: string;
+  courseName?: string;
 };
 
-const mockRegister = async (data: RegisterData): Promise<{ user: User; token: string }> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock registration (in a real app, this would create a new user)
-  return {
-    user: {
-      id: "3",
-      name: data.name,
-      email: data.email,
-      role: "user"
-    },
-    token: "mock-jwt-token-new-user"
-  };
+type AuthState = {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  error: string | null;
 };
 
-interface AuthContextType {
+type AuthAction =
+  | { type: 'LOGIN_REQUEST' }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'LOGIN_FAILURE'; payload: string }
+  | { type: 'LOGOUT' };
+
+const initialState: AuthState = {
+  user: null,
+  token: null,
+  isLoading: false,
+  error: null,
+};
+
+const AuthContext = createContext<{
   authState: AuthState;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => void;
+}>({
+  authState: initialState,
+  login: async () => {},
+  logout: () => {},
+});
+
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case 'LOGIN_REQUEST':
+      return { ...state, isLoading: true, error: null };
+    case 'LOGIN_SUCCESS':
+      return {
+        ...state,
+        isLoading: false,
+        user: action.payload.user,
+        token: action.payload.token,
+        error: null,
+      };
+    case 'LOGIN_FAILURE':
+      return { ...state, isLoading: false, error: action.payload };
+    case 'LOGOUT':
+      return { ...initialState };
+    default:
+      return state;
+  }
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    token: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-  });
-  
-  const { toast } = useToast();
+  const [authState, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for saved token on mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
-    
-    if (token && user) {
-      try {
-        setAuthState({
-          user: JSON.parse(user),
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-      } catch (error) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setAuthState({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-          error: "Session expired. Please log in again.",
-        });
-      }
-    } else {
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (storedToken && storedUser) {
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: {
+          token: storedToken,
+          user: JSON.parse(storedUser),
+        },
+      });
     }
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async ({ email, password }: { email: string; password: string }) => {
     try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-      const { user, token } = await mockLogin(credentials);
-      
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      
-      setAuthState({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-      
-      toast({
-        title: "Logged in successfully",
-        description: `Welcome back, ${user.name}!`,
-      });
-    } catch (error) {
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Login failed",
-      }));
-      
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      });
-    }
-  };
+      dispatch({ type: 'LOGIN_REQUEST' });
 
-  const register = async (data: RegisterData) => {
-    try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-      const { user, token } = await mockRegister(data);
-      
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      
-      setAuthState({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-      
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${user.name}!`,
-      });
-    } catch (error) {
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Registration failed",
-      }));
-      
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "Could not create account",
-        variant: "destructive",
-      });
+      const data = await callLoginAPI({ email, password });
+
+      if (data.status === 'SUCCESS') {
+        const { token, user } = data.payload;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        dispatch({ type: 'LOGIN_SUCCESS', payload: { token, user } });
+      } else {
+        dispatch({ type: 'LOGIN_FAILURE', payload: data.responseMsg || 'Authentication failed' });
+      }
+    } catch (error: any) {
+      dispatch({ type: 'LOGIN_FAILURE', payload: 'Internal server error' });
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    
-    setAuthState({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    });
-    
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    dispatch({ type: 'LOGOUT' });
   };
 
   return (
-    <AuthContext.Provider value={{ authState, login, register, logout }}>
+    <AuthContext.Provider value={{ authState, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

@@ -3,38 +3,38 @@ import { Quiz, Question, Option, Answer, QuizResult } from "@/types";
 
 // Mock data
 const mockQuizzes: Quiz[] = [
-  {
-    id: "1",
-    title: "Computer Science Fundamentals",
-    description: "Test your knowledge of basic computer science concepts",
-    timeLimit: 15, // minutes
-    questionCount: 10,
-    courseId: "cs"
-  },
-  {
-    id: "2",
-    title: "Engineering Principles",
-    description: "Challenge yourself with key engineering concepts",
-    timeLimit: 20,
-    questionCount: 15,
-    courseId: "eng"
-  },
-  {
-    id: "3",
-    title: "Business Administration Basics",
-    description: "Test your understanding of business principles",
-    timeLimit: 25,
-    questionCount: 12,
-    courseId: "bus"
-  },
-  {
-    id: "4",
-    title: "General Knowledge",
-    description: "Test your general knowledge across multiple subjects",
-    timeLimit: 15,
-    questionCount: 20,
-    courseId: "all"
-  },
+  // {
+  //   id: "1",
+  //   title: "Computer Science Fundamentals",
+  //   description: "Test your knowledge of basic computer science concepts",
+  //   timeLimit: 15, // minutes
+  //   questionCount: 10,
+  //   courseId: "cs"
+  // },
+  // {
+  //   id: "2",
+  //   title: "Engineering Principles",
+  //   description: "Challenge yourself with key engineering concepts",
+  //   timeLimit: 20,
+  //   questionCount: 15,
+  //   courseId: "eng"
+  // },
+  // {
+  //   id: "3",
+  //   title: "Business Administration Basics",
+  //   description: "Test your understanding of business principles",
+  //   timeLimit: 25,
+  //   questionCount: 12,
+  //   courseId: "bus"
+  // },
+  // {
+  //   id: "4",
+  //   title: "General Knowledge",
+  //   description: "Test your general knowledge across multiple subjects",
+  //   timeLimit: 15,
+  //   questionCount: 20,
+  //   courseId: "all"
+  // },
 ];
 
 const mockQuestions: Record<string, Question[]> = {

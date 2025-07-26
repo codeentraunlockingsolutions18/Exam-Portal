@@ -1,8 +1,9 @@
+// src/components/forms/RegisterForm.tsx
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import CourseSelector from "./CourseSelector";
-import { useRegisterUser } from "@/data/courses";
+import { useRegisterUser } from "@/hooks/useRegister";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -14,41 +15,41 @@ const RegisterForm = ({ onSuccess }: RegisterFormProps) => {
     email: "",
     password: "",
     confirmPassword: "",
-    selectedCourse: "",
   });
+
   const [passwordError, setPasswordError] = useState("");
   const [apiError, setApiError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  const { registerUser, loading, error, success } = useRegisterUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleCourseSelect = (courseId: string) => {
-    setFormData((prev) => ({ ...prev, selectedCourse: courseId }));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setApiError("");
+
+    if (formData.password !== formData.confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    if (!formData.name || !formData.email || !formData.password) {
+      setApiError("All fields are required.");
+      return;
+    }
+
+    await registerUser({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (success && onSuccess) onSuccess();
   };
-
-const { registerUser, loading, error, success } = useRegisterUser();
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const payload = {
-    name: formData.name,
-    email: formData.email,
-     course_id: formData.selectedCourse,
-    password: formData.password,
-   
-  };
-
-  await registerUser(payload);
-};
-
-
-  // const handleSubmit = (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   handleRegister();
-  // };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +65,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             value={formData.name}
             onChange={handleChange}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
         </div>
 
@@ -75,19 +76,13 @@ const handleSubmit = async (e: React.FormEvent) => {
           <Input
             id="email"
             type="email"
-            placeholder="your@email.com"
+            placeholder="you@example.com"
             value={formData.email}
             onChange={handleChange}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
         </div>
-
-        <CourseSelector
-          selectedCourse={formData.selectedCourse}
-          onSelectCourse={handleCourseSelect}
-          disabled={isLoading}
-        />
 
         <div className="grid gap-2">
           <label htmlFor="password" className="text-sm font-medium">
@@ -99,7 +94,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             value={formData.password}
             onChange={handleChange}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
         </div>
 
@@ -113,15 +108,16 @@ const handleSubmit = async (e: React.FormEvent) => {
             value={formData.confirmPassword}
             onChange={handleChange}
             required
-            disabled={isLoading}
+            disabled={loading}
           />
           {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
         </div>
 
         {apiError && <div className="text-red-500 text-sm">{apiError}</div>}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
 
-        <Button type="submit" disabled={isLoading} className="w-full mt-2">
-          {isLoading ? "Creating Account..." : "Register"}
+        <Button type="submit" disabled={loading} className="w-full mt-2">
+          {loading ? "Registering..." : "Register"}
         </Button>
       </div>
     </form>

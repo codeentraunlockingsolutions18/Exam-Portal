@@ -34,7 +34,7 @@ const CourseSelector = ({
       >
         <option value="">-- Select --</option>
         {courses.map((course) => (
-          <option key={course.name} value={course.name}>
+          <option key={course.id} value={course.id}>
             {course.name}
            
           </option>

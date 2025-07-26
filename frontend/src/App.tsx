@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom"; // 
 
 // Context Providers
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -36,37 +35,36 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<Index />} />
-                
-                {/* Auth Routes */}
-                <Route element={<AuthLayout />}>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                </Route>
-                
-                {/* Protected Routes */}
-                <Route element={<ProtectedLayout />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/quiz/:quizId" element={<QuizDetails />} />
-                  <Route path="/quiz/:quizId/take" element={<QuizTaking />} />
-                  <Route path="/quiz/:quizId/result" element={<QuizResult />} />
-                  
-                  {/* Admin Routes */}
-                  <Route element={<AdminLayout />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/quiz/:quizId" element={<AdminQuizEdit />} />
-                  </Route>
-                </Route>
-                
-                {/* Not Found */}
-                <Route path="*" element={<NotFound />} />
+          {/* ✅ REMOVE <BrowserRouter> */}
+          <Routes>
+            {/* Public Routes */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index />} />
+
+              {/* Auth Routes */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
               </Route>
-            </Routes>
-          </BrowserRouter>
+
+              {/* Protected Routes */}
+              <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/quiz/:quizId" element={<QuizDetails />} />
+                <Route path="/quiz/:quizId/take" element={<QuizTaking />} />
+                <Route path="/quiz/:quizId/result" element={<QuizResult />} />
+
+                {/* Admin Routes */}
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/quiz/:quizId" element={<AdminQuizEdit />} />
+                </Route>
+              </Route>
+
+              {/* Not Found */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
         </TooltipProvider>
       </QuizProvider>
     </AuthProvider>

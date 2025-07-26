@@ -1,9 +1,30 @@
-
-import { Link } from "react-router-dom";
+// src/pages/Login.tsx
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import LoginForm from "@/components/forms/LoginForm";
+import { Link } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { authState } = useAuth();
+  const { user } = authState;
+
+  useEffect(() => {
+    if (user) {
+      switch (user.role) {
+        case "STUDENT":
+         navigate("/dashboard");
+          break;
+        case "ADMIN":
+          navigate("/admin");
+          break;
+          
+      }
+    }
+  }, [user]);
+
   return (
     <Card className="w-full">
       <CardHeader>
