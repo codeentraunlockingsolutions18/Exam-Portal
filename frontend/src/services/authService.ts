@@ -1,7 +1,7 @@
 import axiosInstance from './axiosSetup';
 
 export const callLoginAPI = async (payload: { email: string; password: string }) => {
-  const response = await axiosInstance.post('/v1/user/login', payload);
+  const response = await axiosInstance.post('/users/login', payload);
   return response.data;
 };
 export const callRegisterAPI = async (payload: {
@@ -9,6 +9,6 @@ export const callRegisterAPI = async (payload: {
   email: string;
   password: string;
 }) => {
-  const response = await axiosInstance.post("/v1/user/register", payload);
+  const response = await axiosInstance.post("/users/register", payload);
   return response.data;
 };
