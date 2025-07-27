@@ -11,19 +11,19 @@ const Login = () => {
   const { authState } = useAuth();
   const { user } = authState;
 
-  useEffect(() => {
-    if (user) {
-      switch (user.role) {
-        case "STUDENT":
-         navigate("/dashboard");
-          break;
-        case "ADMIN":
-          navigate("/admin");
-          break;
+  // useEffect(() => {
+  //   if (user) {
+  //     switch (user.role) {
+  //       case "STUDENT":
+  //        navigate("/dashboard");
+  //         break;
+  //       case "ADMIN":
+  //         navigate("/admin");
+  //         break;
           
-      }
-    }
-  }, [user]);
+  //     }
+  //   }
+  // }, [user]);
 
   return (
     <Card className="w-full">

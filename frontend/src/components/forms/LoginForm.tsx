@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext';
+import { callLoginAPI } from '@/services/authService';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -10,19 +11,45 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, authState } = useAuth();
-  const { isLoading, error, user } = authState;
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate(); 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ email, password });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await callLoginAPI({ email, password });
+
+      if (
+        res.status === 'SUCCESS' &&
+        res.payload?.user?.role === 'STUDENT'
+      ) {
+        setUser(res.payload.user);
+        sessionStorage.setItem('token', res.payload.token);
+        sessionStorage.setItem('user', JSON.stringify(res.payload.user));
+
+        navigate('/dashboard'); 
+      } else {
+        setError('Unauthorized access');
+      }
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.responseMsg || 'Login failed. Please try again.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     if (user && onSuccess) {
       onSuccess();
     }
-  }, [user]);
+  }, [user, onSuccess]);
 
   return (
     <form onSubmit={handleSubmit}>
