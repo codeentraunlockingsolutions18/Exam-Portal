@@ -1,14 +1,25 @@
 
-import { Link } from "react-router-dom";
+import { Link,useLocation } from "react-router-dom";
 
 const Footer = () => {
+
+const location = useLocation();
+
+  const handleHomeClick = () => {
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    // Otherwise, navigation to "/" will happen automatically
+  };
+
+
   return (
     <footer className="mt-auto border-t">
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
             <Link to="/" className="text-xl font-bold text-quiz-blue">
-              QuizMaster
+              ExamEntra
             </Link>
             <p className="text-sm text-gray-500 mt-1">
               Test your knowledge with interactive quizzes
@@ -16,7 +27,7 @@ const Footer = () => {
           </div>
           
           <div className="flex gap-6">
-            <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
+            <Link to="/" onClick={handleHomeClick} className="text-sm text-gray-500 hover:text-gray-700">
               Home
             </Link>
             <Link to="/about" className="text-sm text-gray-500 hover:text-gray-700">
